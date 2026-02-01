@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Calendar</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+    <div class="landing-container">
+        <header class="landing-header">
+            <h1>Family Calendar</h1>
+            <p>Plan together, stay in sync.</p>
+        </header>
+
+        <div class="landing-cards">
+            <!-- Create Family -->
+            <div class="card" id="create-card">
+                <h2>Create a Family</h2>
+                <p>Start a new shared calendar and invite your family.</p>
+                <form id="create-form" onsubmit="handleCreate(event)">
+                    <div class="form-group">
+                        <label for="create-family-name">Family Name</label>
+                        <input type="text" id="create-family-name" placeholder="e.g. The Smiths" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-name">Your Name</label>
+                        <input type="text" id="create-name" placeholder="e.g. Mom" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Your Color</label>
+                        <div class="color-picker" id="create-color-picker"></div>
+                        <input type="hidden" id="create-color" value="#E74C3C">
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="create-btn">Create Family</button>
+                </form>
+            </div>
+
+            <!-- Success Card (hidden initially) -->
+            <div class="card hidden" id="success-card">
+                <h2>Family Created!</h2>
+                <p>Share this invite code with your family members:</p>
+                <div class="invite-code-display large">
+                    <code id="success-invite-code"></code>
+                    <button class="btn btn-sm" onclick="copyCode()">Copy</button>
+                </div>
+                <button class="btn btn-primary" onclick="window.location.href='calendar.html'">Open Calendar</button>
+            </div>
+
+            <!-- Join Family -->
+            <div class="card">
+                <h2>Join a Family</h2>
+                <p>Enter the invite code shared with you.</p>
+                <form id="join-form" onsubmit="handleJoin(event)">
+                    <div class="form-group">
+                        <label for="join-code">Invite Code</label>
+                        <input type="text" id="join-code" placeholder="e.g. a3f2b1c9" required maxlength="8">
+                    </div>
+                    <div class="form-group">
+                        <label for="join-name">Your Name</label>
+                        <input type="text" id="join-name" placeholder="e.g. Dad" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Your Color</label>
+                        <div class="color-picker" id="join-color-picker"></div>
+                        <input type="hidden" id="join-color" value="#3498DB">
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="join-btn">Join Family</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Check if already in a family
+        if (getFamilyId()) {
+            window.location.href = 'calendar.html';
+        }
+
+        // Render color pickers
+        function renderColorPickers() {
+            ['create', 'join'].forEach(prefix => {
+                const picker = document.getElementById(`${prefix}-color-picker`);
+                const defaultColor = prefix === 'create' ? '#E74C3C' : '#3498DB';
+                picker.innerHTML = MEMBER_COLORS.map((c, i) =>
+                    `<button type="button" class="color-swatch ${c === defaultColor ? 'active' : ''}"
+                            style="background:${c}"
+                            onclick="pickColor('${prefix}', '${c}', this)"></button>`
+                ).join('');
+            });
+        }
+
+        function pickColor(prefix, color, btn) {
+            document.getElementById(`${prefix}-color`).value = color;
+            btn.parentElement.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function handleCreate(e) {
+            e.preventDefault();
+            const btn = document.getElementById('create-btn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            try {
+                const data = await createFamily(
+                    document.getElementById('create-family-name').value,
+                    document.getElementById('create-name').value,
+                    document.getElementById('create-color').value
+                );
+                document.getElementById('success-invite-code').textContent = data.invite_code;
+                document.getElementById('create-card').classList.add('hidden');
+                document.getElementById('success-card').classList.remove('hidden');
+            } catch (err) {
+                showToast('Error: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Create Family';
+            }
+        }
+
+        async function handleJoin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('join-btn');
+            btn.disabled = true;
+            btn.textContent = 'Joining...';
+            try {
+                await joinFamily(
+                    document.getElementById('join-code').value,
+                    document.getElementById('join-name').value,
+                    document.getElementById('join-color').value
+                );
+                window.location.href = 'calendar.html';
+            } catch (err) {
+                showToast('Error: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Join Family';
+            }
+        }
+
+        function copyCode() {
+            const code = document.getElementById('success-invite-code').textContent;
+            navigator.clipboard.writeText(code).then(() => showToast('Code copied!'));
+        }
+
+        renderColorPickers();
+    </script>
+</body>
+</html>

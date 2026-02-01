@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Calendar</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/calendar.css">
+    <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top bar -->
+        <header class="app-header">
+            <h1>Family Calendar</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="openSettings()">Settings</button>
+            </div>
+        </header>
+
+        <!-- Calendar controls -->
+        <div class="calendar-nav">
+            <button class="btn-icon nav-btn" onclick="prevMonth()">&#9664;</button>
+            <h2 id="month-label"></h2>
+            <button class="btn-icon nav-btn" onclick="nextMonth()">&#9654;</button>
+            <button class="btn btn-sm" onclick="goToToday()" style="margin-left:auto">Today</button>
+        </div>
+
+        <!-- Calendar grid -->
+        <div id="calendar-grid" class="calendar-grid"></div>
+
+        <!-- Day detail panel (sidebar) -->
+        <div id="day-panel" class="side-panel"></div>
+
+        <!-- Settings panel (sidebar) -->
+        <div id="settings-panel" class="side-panel"></div>
+    </div>
+
+    <!-- Event modal -->
+    <div id="event-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="event-modal-title">New Event</h3>
+                <button class="btn-icon" onclick="closeEventModal()">&times;</button>
+            </div>
+            <form id="event-form" onsubmit="handleEventSubmit(event)">
+                <div class="form-group">
+                    <label for="event-title">Title</label>
+                    <input type="text" id="event-title" required placeholder="What's happening?">
+                </div>
+                <div class="form-group">
+                    <label for="event-description">Description</label>
+                    <textarea id="event-description" rows="2" placeholder="Optional details..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-date">Date</label>
+                        <input type="date" id="event-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="event-all-day"> All day
+                        </label>
+                    </div>
+                </div>
+                <div class="form-row" id="time-row">
+                    <div class="form-group">
+                        <label for="event-start-time">Start</label>
+                        <input type="time" id="event-start-time" value="09:00">
+                    </div>
+                    <div class="form-group">
+                        <label for="event-end-time">End</label>
+                        <input type="time" id="event-end-time" value="10:00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-recurrence">Repeat</label>
+                        <select id="event-recurrence">
+                            <option value="none">No repeat</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-reminder">Reminder</label>
+                        <select id="event-reminder">
+                            <option value="">No reminder</option>
+                            <option value="15">15 min before</option>
+                            <option value="30">30 min before</option>
+                            <option value="60">1 hour before</option>
+                            <option value="1440">1 day before</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEventModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Block days modal -->
+    <div id="block-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Block Days</h3>
+                <button class="btn-icon" onclick="closeBlockModal()">&times;</button>
+            </div>
+            <form onsubmit="handleBlockSubmit(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="block-start">Start Date</label>
+                        <input type="date" id="block-start" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="block-end">End Date</label>
+                        <input type="date" id="block-end" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="block-label">Label</label>
+                    <input type="text" id="block-label" value="Work" placeholder="e.g. Work trip, Conference">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeBlockModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Block Days</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/members.js"></script>
+    <script src="js/events.js"></script>
+    <script src="js/rsvp.js"></script>
+    <script src="js/blocked-days.js"></script>
+    <script src="js/realtime.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/calendar-ui.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Toggle time fields based on all-day checkbox
+        document.getElementById('event-all-day').addEventListener('change', function() {
+            document.getElementById('time-row').style.display = this.checked ? 'none' : '';
+        });
+
+        // Go to today
+        function goToToday() {
+            const now = new Date();
+            currentYear = now.getFullYear();
+            currentMonth = now.getMonth();
+            selectedDate = null;
+            closeDayPanel();
+            refreshCalendar();
+        }
+    </script>
+</body>
+</html>

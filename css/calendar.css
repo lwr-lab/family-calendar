@@ -17,6 +17,73 @@
     padding: 8px 12px;
 }
 
+/* Major events section */
+.major-events-section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+}
+
+.major-events-section:empty {
+    display: none;
+}
+
+.major-events-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.major-events-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.major-event-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--bg);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.major-event-item:hover {
+    background: #e8f0fe;
+}
+
+.major-event-date {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.8rem;
+}
+
+.major-event-title {
+    color: var(--text);
+}
+
+.major-event-creator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.no-major-events {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 /* Calendar grid */
 .calendar-grid {
     display: grid;

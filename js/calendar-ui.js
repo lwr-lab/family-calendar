@@ -18,6 +18,9 @@ function renderCalendar() {
 
     monthLabel.textContent = firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
+    // Render major events for this month
+    renderMajorEvents(firstDay, lastDay);
+
     let html = '';
     ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => {
         html += `<div class="cal-header">${d}</div>`;
@@ -199,4 +202,54 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function renderMajorEvents(firstDay, lastDay) {
+    const container = document.getElementById('major-events');
+    if (!container) return;
+
+    // Get all events for this month
+    const monthEvents = [];
+    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+        const dayEvents = getEventsForDate(new Date(d));
+        dayEvents.forEach(evt => {
+            // Avoid duplicates for recurring events shown on multiple days
+            if (!monthEvents.find(e => (e.original_id || e.id) === (evt.original_id || evt.id) && e.event_date === evt.event_date)) {
+                monthEvents.push(evt);
+            }
+        });
+    }
+
+    // Sort by date
+    monthEvents.sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+
+    if (monthEvents.length === 0) {
+        container.innerHTML = `
+            <div class="major-events-header">Major Events This Month</div>
+            <div class="no-major-events">No events scheduled</div>
+        `;
+        return;
+    }
+
+    let html = `<div class="major-events-header">Major Events This Month</div>`;
+    html += `<div class="major-events-list">`;
+
+    monthEvents.forEach(evt => {
+        const eventDate = new Date(evt.event_date + 'T00:00:00');
+        const dayNum = eventDate.getDate();
+        const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
+        const color = getMemberColor(evt.created_by);
+        const dateStr = evt.event_date;
+
+        html += `
+            <div class="major-event-item" onclick="selectDay('${dateStr}')">
+                <span class="major-event-creator" style="background:${color}"></span>
+                <span class="major-event-date">${dayName} ${dayNum}</span>
+                <span class="major-event-title">${escapeHtml(evt.title)}</span>
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+    container.innerHTML = html;
 }

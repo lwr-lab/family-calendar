@@ -204,52 +204,118 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function renderMajorEvents(firstDay, lastDay) {
+let currentMajorEvent = null;
+
+async function loadMajorEvent(year, month) {
+    const yearMonth = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const familyId = getFamilyId();
+    if (!familyId) return null;
+
+    const { data, error } = await supabase
+        .from('major_events')
+        .select('*')
+        .eq('family_id', familyId)
+        .eq('year_month', yearMonth)
+        .single();
+
+    if (error && error.code !== 'PGRST116') {
+        console.error('Error loading major event:', error);
+    }
+    return data || null;
+}
+
+async function saveMajorEvent(year, month, title) {
+    const yearMonth = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const familyId = getFamilyId();
+    const memberId = getMemberId();
+    if (!familyId) return;
+
+    if (!title.trim()) {
+        // Delete if empty
+        await supabase
+            .from('major_events')
+            .delete()
+            .eq('family_id', familyId)
+            .eq('year_month', yearMonth);
+        currentMajorEvent = null;
+    } else {
+        // Upsert
+        const { data, error } = await supabase
+            .from('major_events')
+            .upsert({
+                family_id: familyId,
+                year_month: yearMonth,
+                title: title.trim(),
+                updated_by: memberId,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'family_id,year_month' })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error saving major event:', error);
+            showToast('Failed to save', 'error');
+            return;
+        }
+        currentMajorEvent = data;
+    }
+    showToast('Saved!', 'success');
+}
+
+async function renderMajorEvents(firstDay, lastDay) {
     const container = document.getElementById('major-events');
     if (!container) return;
 
-    // Get all events for this month
-    const monthEvents = [];
-    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
-        const dayEvents = getEventsForDate(new Date(d));
-        dayEvents.forEach(evt => {
-            // Avoid duplicates for recurring events shown on multiple days
-            if (!monthEvents.find(e => (e.original_id || e.id) === (evt.original_id || evt.id) && e.event_date === evt.event_date)) {
-                monthEvents.push(evt);
+    currentMajorEvent = await loadMajorEvent(currentYear, currentMonth);
+    const monthName = firstDay.toLocaleDateString('en-US', { month: 'long' });
+
+    const title = currentMajorEvent?.title || '';
+
+    container.innerHTML = `
+        <div class="major-events-header">Major Event in ${monthName}</div>
+        <div class="major-event-display" id="major-event-display">
+            ${title
+                ? `<span class="major-event-text">${escapeHtml(title)}</span>`
+                : `<span class="major-event-placeholder">No major event set</span>`
             }
-        });
+            <button class="major-event-edit-btn" onclick="editMajorEvent()">Edit</button>
+        </div>
+        <div class="major-event-form" id="major-event-form" style="display:none">
+            <input type="text" class="major-event-input" id="major-event-input"
+                   placeholder="Enter major event for this month..."
+                   value="${escapeHtml(title)}"
+                   onkeydown="handleMajorEventKeydown(event)">
+            <button class="major-event-save-btn" onclick="saveMajorEventFromInput()">Save</button>
+            <button class="major-event-cancel-btn" onclick="cancelMajorEventEdit()">Cancel</button>
+        </div>
+    `;
+}
+
+function editMajorEvent() {
+    document.getElementById('major-event-display').style.display = 'none';
+    document.getElementById('major-event-form').style.display = 'flex';
+    const input = document.getElementById('major-event-input');
+    input.focus();
+    input.select();
+}
+
+function cancelMajorEventEdit() {
+    document.getElementById('major-event-display').style.display = 'flex';
+    document.getElementById('major-event-form').style.display = 'none';
+    // Reset input value
+    document.getElementById('major-event-input').value = currentMajorEvent?.title || '';
+}
+
+async function saveMajorEventFromInput() {
+    const input = document.getElementById('major-event-input');
+    await saveMajorEvent(currentYear, currentMonth, input.value);
+    renderMajorEvents(new Date(currentYear, currentMonth, 1), new Date(currentYear, currentMonth + 1, 0));
+}
+
+function handleMajorEventKeydown(event) {
+    if (event.key === 'Enter') {
+        saveMajorEventFromInput();
+    } else if (event.key === 'Escape') {
+        cancelMajorEventEdit();
     }
-
-    // Sort by date
-    monthEvents.sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
-
-    if (monthEvents.length === 0) {
-        container.innerHTML = `
-            <div class="major-events-header">Major Events This Month</div>
-            <div class="no-major-events">No events scheduled</div>
-        `;
-        return;
-    }
-
-    let html = `<div class="major-events-header">Major Events This Month</div>`;
-    html += `<div class="major-events-list">`;
-
-    monthEvents.forEach(evt => {
-        const eventDate = new Date(evt.event_date + 'T00:00:00');
-        const dayNum = eventDate.getDate();
-        const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
-        const color = getMemberColor(evt.created_by);
-        const dateStr = evt.event_date;
-
-        html += `
-            <div class="major-event-item" onclick="selectDay('${dateStr}')">
-                <span class="major-event-creator" style="background:${color}"></span>
-                <span class="major-event-date">${dayName} ${dayNum}</span>
-                <span class="major-event-title">${escapeHtml(evt.title)}</span>
-            </div>
-        `;
-    });
-
-    html += `</div>`;
-    container.innerHTML = html;
 }

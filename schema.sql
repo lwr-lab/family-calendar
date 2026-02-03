@@ -55,6 +55,16 @@ CREATE TABLE blocked_days (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE major_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+    year_month TEXT NOT NULL,
+    title TEXT NOT NULL,
+    updated_by UUID REFERENCES members(id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(family_id, year_month)
+);
+
 -- 2. Indexes
 
 CREATE INDEX idx_events_family_start ON events(family_id, start_time);
@@ -63,6 +73,7 @@ CREATE INDEX idx_members_user ON members(user_id);
 CREATE INDEX idx_rsvps_event ON rsvps(event_id);
 CREATE INDEX idx_blocked_days_family_date ON blocked_days(family_id, start_date, end_date);
 CREATE INDEX idx_families_invite_code ON families(invite_code);
+CREATE INDEX idx_major_events_family_month ON major_events(family_id, year_month);
 
 -- 3. Row Level Security
 
@@ -71,6 +82,7 @@ ALTER TABLE members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rsvps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blocked_days ENABLE ROW LEVEL SECURITY;
+ALTER TABLE major_events ENABLE ROW LEVEL SECURITY;
 
 -- Helper function
 CREATE OR REPLACE FUNCTION get_my_family_ids()
@@ -142,6 +154,23 @@ CREATE POLICY "Members can update own blocked days"
 CREATE POLICY "Members can delete own blocked days"
     ON blocked_days FOR DELETE
     USING (member_id IN (SELECT id FROM members WHERE user_id = auth.uid()));
+
+-- Major events policies
+CREATE POLICY "Members can view family major events"
+    ON major_events FOR SELECT
+    USING (family_id IN (SELECT get_my_family_ids()));
+
+CREATE POLICY "Members can create major events"
+    ON major_events FOR INSERT
+    WITH CHECK (family_id IN (SELECT get_my_family_ids()));
+
+CREATE POLICY "Members can update family major events"
+    ON major_events FOR UPDATE
+    USING (family_id IN (SELECT get_my_family_ids()));
+
+CREATE POLICY "Members can delete family major events"
+    ON major_events FOR DELETE
+    USING (family_id IN (SELECT get_my_family_ids()));
 
 -- 4. RPC Functions
 

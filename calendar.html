@@ -79,11 +79,12 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="event-recurrence">Repeat</label>
-                        <select id="event-recurrence">
+                        <select id="event-recurrence" onchange="toggleRecurrenceEnd()">
                             <option value="none">No repeat</option>
                             <option value="daily">Daily</option>
                             <option value="weekly">Weekly</option>
                             <option value="monthly">Monthly</option>
+                            <option value="custom">Custom...</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -95,6 +96,23 @@
                             <option value="60">1 hour before</option>
                             <option value="1440">1 day before</option>
                         </select>
+                    </div>
+                </div>
+                <div class="form-row" id="custom-recurrence-row" style="display:none">
+                    <div class="form-group">
+                        <label for="event-recurrence-interval">Every</label>
+                        <div class="recurrence-interval-group">
+                            <input type="number" id="event-recurrence-interval" min="1" value="1" style="width:60px">
+                            <select id="event-recurrence-unit">
+                                <option value="daily">day(s)</option>
+                                <option value="weekly">week(s)</option>
+                                <option value="monthly">month(s)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-recurrence-end">Until</label>
+                        <input type="date" id="event-recurrence-end">
                     </div>
                 </div>
                 <div class="form-actions">
@@ -154,6 +172,13 @@
         document.getElementById('event-all-day').addEventListener('change', function() {
             document.getElementById('time-row').style.display = this.checked ? 'none' : '';
         });
+
+        // Toggle custom recurrence options
+        function toggleRecurrenceEnd() {
+            const recurrence = document.getElementById('event-recurrence').value;
+            const customRow = document.getElementById('custom-recurrence-row');
+            customRow.style.display = recurrence === 'custom' ? 'flex' : 'none';
+        }
 
         // Go to today
         function goToToday() {

@@ -30,6 +30,8 @@ CREATE TABLE events (
     end_time TIMESTAMPTZ NOT NULL,
     is_all_day BOOLEAN DEFAULT false,
     recurrence TEXT DEFAULT 'none' CHECK (recurrence IN ('none', 'daily', 'weekly', 'monthly')),
+    recurrence_interval INTEGER DEFAULT 1,
+    recurrence_end DATE,
     reminder_minutes INTEGER,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()

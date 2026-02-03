@@ -116,6 +116,25 @@
     opacity: 0.9;
 }
 
+/* Custom recurrence */
+.recurrence-interval-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.recurrence-interval-group input {
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.recurrence-interval-group select {
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
 /* Calendar grid */
 .calendar-grid {
     display: grid;

@@ -37,6 +37,9 @@ function openCreateEvent(dateStr) {
     document.getElementById('event-date').value = dateStr;
     document.getElementById('event-start-time').value = '09:00';
     document.getElementById('event-end-time').value = '10:00';
+    document.getElementById('event-recurrence-interval').value = '1';
+    document.getElementById('event-recurrence-end').value = '';
+    document.getElementById('custom-recurrence-row').style.display = 'none';
     modal.classList.add('open');
 }
 
@@ -54,8 +57,23 @@ function openEditEvent(eventId) {
     document.getElementById('event-start-time').value = new Date(event.start_time).toTimeString().slice(0, 5);
     document.getElementById('event-end-time').value = new Date(event.end_time).toTimeString().slice(0, 5);
     document.getElementById('event-all-day').checked = event.is_all_day;
-    document.getElementById('event-recurrence').value = event.recurrence;
     document.getElementById('event-reminder').value = event.reminder_minutes || '';
+
+    // Handle custom recurrence
+    const hasCustomRecurrence = event.recurrence_interval > 1 || event.recurrence_end;
+    if (hasCustomRecurrence && event.recurrence !== 'none') {
+        document.getElementById('event-recurrence').value = 'custom';
+        document.getElementById('event-recurrence-interval').value = event.recurrence_interval || 1;
+        document.getElementById('event-recurrence-unit').value = event.recurrence;
+        document.getElementById('event-recurrence-end').value = event.recurrence_end || '';
+        document.getElementById('custom-recurrence-row').style.display = 'flex';
+    } else {
+        document.getElementById('event-recurrence').value = event.recurrence;
+        document.getElementById('event-recurrence-interval').value = 1;
+        document.getElementById('event-recurrence-end').value = '';
+        document.getElementById('custom-recurrence-row').style.display = 'none';
+    }
+
     modal.classList.add('open');
 }
 
@@ -71,6 +89,18 @@ async function handleEventSubmit(e) {
     const endTime = document.getElementById('event-end-time').value;
     const isAllDay = document.getElementById('event-all-day').checked;
     const reminder = document.getElementById('event-reminder').value;
+    const recurrenceSelect = document.getElementById('event-recurrence').value;
+
+    // Handle custom recurrence
+    let recurrence = recurrenceSelect;
+    let recurrenceInterval = 1;
+    let recurrenceEnd = null;
+
+    if (recurrenceSelect === 'custom') {
+        recurrence = document.getElementById('event-recurrence-unit').value;
+        recurrenceInterval = parseInt(document.getElementById('event-recurrence-interval').value) || 1;
+        recurrenceEnd = document.getElementById('event-recurrence-end').value || null;
+    }
 
     const eventData = {
         title: document.getElementById('event-title').value,
@@ -78,7 +108,9 @@ async function handleEventSubmit(e) {
         start_time: isAllDay ? `${date}T00:00:00` : `${date}T${startTime}:00`,
         end_time: isAllDay ? `${date}T23:59:59` : `${date}T${endTime}:00`,
         is_all_day: isAllDay,
-        recurrence: document.getElementById('event-recurrence').value,
+        recurrence: recurrence,
+        recurrence_interval: recurrenceInterval,
+        recurrence_end: recurrenceEnd,
         reminder_minutes: reminder ? parseInt(reminder) : null
     };
 

@@ -22,14 +22,17 @@ function expandRecurring(events, rangeStart, rangeEnd) {
         const start = new Date(event.start_time);
         const end = new Date(event.end_time);
         const duration = end - start;
+        const interval = event.recurrence_interval || 1;
+        const recurrenceEnd = event.recurrence_end ? new Date(event.recurrence_end + 'T23:59:59') : null;
         let cursor = new Date(start);
 
-        for (let i = 0; i < 60; i++) {
-            if (event.recurrence === 'daily') cursor.setDate(cursor.getDate() + 1);
-            else if (event.recurrence === 'weekly') cursor.setDate(cursor.getDate() + 7);
-            else if (event.recurrence === 'monthly') cursor.setMonth(cursor.getMonth() + 1);
+        for (let i = 0; i < 365; i++) {
+            if (event.recurrence === 'daily') cursor.setDate(cursor.getDate() + interval);
+            else if (event.recurrence === 'weekly') cursor.setDate(cursor.getDate() + (7 * interval));
+            else if (event.recurrence === 'monthly') cursor.setMonth(cursor.getMonth() + interval);
 
             if (cursor > rangeEnd) break;
+            if (recurrenceEnd && cursor > recurrenceEnd) break;
             if (cursor >= rangeStart) {
                 result.push({
                     ...event,
@@ -65,6 +68,8 @@ async function createEvent(eventData) {
             end_time: eventData.end_time,
             is_all_day: eventData.is_all_day || false,
             recurrence: eventData.recurrence || 'none',
+            recurrence_interval: eventData.recurrence_interval || 1,
+            recurrence_end: eventData.recurrence_end || null,
             reminder_minutes: eventData.reminder_minutes || null
         })
         .select()
@@ -83,6 +88,8 @@ async function updateEvent(eventId, eventData) {
             end_time: eventData.end_time,
             is_all_day: eventData.is_all_day || false,
             recurrence: eventData.recurrence || 'none',
+            recurrence_interval: eventData.recurrence_interval || 1,
+            recurrence_end: eventData.recurrence_end || null,
             reminder_minutes: eventData.reminder_minutes || null,
             updated_at: new Date().toISOString()
         })

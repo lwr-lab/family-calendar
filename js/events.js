@@ -49,11 +49,19 @@ function expandRecurring(events, rangeStart, rangeEnd) {
 }
 
 function getEventsForDate(date) {
-    const dayStr = date.toISOString().split('T')[0];
+    const dayStr = formatDateLocal(date);
     return calendarEvents.filter(e => {
-        const eventDay = new Date(e.start_time).toISOString().split('T')[0];
+        const eventDate = new Date(e.start_time);
+        const eventDay = formatDateLocal(eventDate);
         return eventDay === dayStr;
     });
+}
+
+function formatDateLocal(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 async function createEvent(eventData) {

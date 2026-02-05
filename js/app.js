@@ -1,3 +1,22 @@
+// Helper functions for local time
+function formatLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function formatLocalTime(date) {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
+function toLocalISOString(dateStr, timeStr) {
+    const date = new Date(`${dateStr}T${timeStr}`);
+    return date.toISOString();
+}
+
 // Toast notification
 function showToast(message) {
     const container = document.getElementById('toast-container');
@@ -37,6 +56,8 @@ function openCreateEvent(dateStr) {
     document.getElementById('event-date').value = dateStr;
     document.getElementById('event-start-time').value = '09:00';
     document.getElementById('event-end-time').value = '10:00';
+    document.getElementById('event-all-day').checked = false;
+    document.getElementById('time-row').style.display = '';
     document.getElementById('event-recurrence-interval').value = '1';
     document.getElementById('event-recurrence-end').value = '';
     document.getElementById('custom-recurrence-row').style.display = 'none';
@@ -53,10 +74,15 @@ function openEditEvent(eventId) {
     form.dataset.eventId = event.original_id || event.id;
     document.getElementById('event-title').value = event.title;
     document.getElementById('event-description').value = event.description || '';
-    document.getElementById('event-date').value = new Date(event.start_time).toISOString().split('T')[0];
-    document.getElementById('event-start-time').value = new Date(event.start_time).toTimeString().slice(0, 5);
-    document.getElementById('event-end-time').value = new Date(event.end_time).toTimeString().slice(0, 5);
+
+    // Use local time for display
+    const startDate = new Date(event.start_time);
+    const endDate = new Date(event.end_time);
+    document.getElementById('event-date').value = formatLocalDate(startDate);
+    document.getElementById('event-start-time').value = formatLocalTime(startDate);
+    document.getElementById('event-end-time').value = formatLocalTime(endDate);
     document.getElementById('event-all-day').checked = event.is_all_day;
+    document.getElementById('time-row').style.display = event.is_all_day ? 'none' : '';
     document.getElementById('event-reminder').value = event.reminder_minutes || '';
 
     // Handle custom recurrence
@@ -105,8 +131,8 @@ async function handleEventSubmit(e) {
     const eventData = {
         title: document.getElementById('event-title').value,
         description: document.getElementById('event-description').value,
-        start_time: isAllDay ? `${date}T00:00:00` : `${date}T${startTime}:00`,
-        end_time: isAllDay ? `${date}T23:59:59` : `${date}T${endTime}:00`,
+        start_time: isAllDay ? toLocalISOString(date, '00:00') : toLocalISOString(date, startTime),
+        end_time: isAllDay ? toLocalISOString(date, '23:59') : toLocalISOString(date, endTime),
         is_all_day: isAllDay,
         recurrence: recurrence,
         recurrence_interval: recurrenceInterval,
